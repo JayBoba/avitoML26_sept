@@ -23,7 +23,15 @@ def build_features(events: pd.DataFrame) -> pd.DataFrame:
         "dt_mean": g["dt"].mean(),
         "dt_std": g["dt"].std(),
         "duration_s": (g["event_ts"].max() - g["event_ts"].min()).dt.total_seconds(),
+        #парсер обходит катало, весь, в ширину и в глубину
+        "category_nunique": g["item_category"].nunique(),
+        "location_nunique": g["item_location"].nunique(),
+        "query_nunique": g["search_query"].nunique(),
+        "search_page_max": g["search_page"].max(),
+        "search_page_mean": g["search_page"].mean(),
     })
+    # доля уникальных объявлений, где 1.0 = ни разу не вернулся к уже просмотренному.
+    features["item_unique_ratio"] = features["item_nunique"] / g["item_id"].count()
     #разброс пауз относительно их среднего
     features["dt_cv"] = features["dt_std"] / features["dt_mean"]
     shares = (
