@@ -9,7 +9,7 @@ EVENT_TYPES = [
 ]
 # captcha_shown не берём тк внутри окон её нет ни в train, ни в test
 
-def build_features(events: pd.DataFrame) -> pd.DataFrame:
+def build_features(events: pd.DataFrame, meta: pd.DataFrame) -> pd.DataFrame:
     """Агрегирует события по cookie_id. Индекс результата — cookie_id."""
     ua = events["user_agent"]
     events = events.assign(
@@ -60,4 +60,4 @@ def build_features(events: pd.DataFrame) -> pd.DataFrame:
         .reindex(columns=EVENT_TYPES, fill_value=0.0)
         .add_prefix("share_")
     )
-    return features.join(shares)
+    return features.join(shares).reindex(meta["cookie_id"])
