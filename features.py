@@ -11,7 +11,16 @@ EVENT_TYPES = [
 
 def build_features(events: pd.DataFrame) -> pd.DataFrame:
     """Агрегирует события по cookie_id. Индекс результата — cookie_id."""
-    events = events.assign(dt=events.groupby("cookie_id")["event_ts"].diff().dt.total_seconds())
+    ua = events["user_agent"]
+    events = events.assign(
+        dt=events.groupby("cookie_id")["event_ts"].diff().dt.total_seconds(),
+
+        ua_headless=ua.str.contains("HeadlessChrome", regex=False),
+        ua_script=~ua.str.startswith(("Mozilla/", "Avito/")),   # curl, python-requests, Scrapy и тд и тп
+        ua_app=ua.str.startswith("Avito/"),                      # мобильное приложение
+        platform_web=events["platform"].eq("web"),
+        platform_android=events["platform"].eq("android"),      # ios когда оба False
+    )
     g = events.groupby("cookie_id")
     features = pd.DataFrame({
         # объём
@@ -29,6 +38,18 @@ def build_features(events: pd.DataFrame) -> pd.DataFrame:
         "query_nunique": g["search_query"].nunique(),
         "search_page_max": g["search_page"].max(),
         "search_page_mean": g["search_page"].mean(),
+        # клиент, доля событий с флагом, UA у куки может меняться
+        "ua_nunique": g["user_agent"].nunique(),
+        "ua_headless": g["ua_headless"].mean(),
+        "ua_script": g["ua_script"].mean(),
+        "ua_app": g["ua_app"].mean(),
+        "platform_web": g["platform_web"].mean(),
+        "platform_android": g["platform_android"].mean(),
+        # курсор есть только на web, у скрипта координаты скучены или отсутствуют
+        "pointer_share": g["pointer_x"].count() / g.size(),
+        "pointer_x_mean": g["pointer_x"].mean(),
+        "pointer_x_std": g["pointer_x"].std(),
+        "pointer_y_std": g["pointer_y"].std(),
     })
     # доля уникальных объявлений, где 1.0 = ни разу не вернулся к уже просмотренному.
     features["item_unique_ratio"] = features["item_nunique"] / g["item_id"].count()
